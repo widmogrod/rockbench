@@ -12,11 +12,17 @@ import (
 func NewCrateDB(ctx context.Context, url string) (*CrateDB, error) {
 	conn, err := pgxpool.New(ctx, url)
 	if err != nil {
-		return nil, fmt.Errorf("cratedb:NewCrateDB: %v", err)
+		return nil, fmt.Errorf("cratedb:NewCrateDB: pool; %v", err)
+	}
+
+	conn2, err := pgx.Connect(ctx, url)
+	if err != nil {
+		return nil, fmt.Errorf("cratedb:NewCrateDB: single; %v", err)
 	}
 
 	return &CrateDB{
-		conn: conn,
+		conn:  conn,
+		conn2: conn2,
 	}, nil
 }
 
@@ -26,10 +32,11 @@ type ma = map[string]any
 
 // CrateDB contains all configurations needed to send documents to CrateDB
 type CrateDB struct {
-	conn *pgxpool.Pool
+	conn  *pgxpool.Pool
+	conn2 *pgx.Conn
 }
 
-func (c CrateDB) Init(ctx context.Context) error {
+func (c *CrateDB) Init(ctx context.Context) error {
 	table := `CREATE TABLE IF NOT EXISTS test (
 		About STRING,
 
@@ -99,7 +106,7 @@ func (c CrateDB) Init(ctx context.Context) error {
 		id STRING,
 		ts TIMESTAMP WITHOUT TIME ZONE,
 		generator_identifier STRING
-	)
+	);
 	`
 
 	_, err := c.conn.Exec(ctx, table)
@@ -110,7 +117,7 @@ func (c CrateDB) Init(ctx context.Context) error {
 	return nil
 }
 
-func (c CrateDB) Reset(ctx context.Context) error {
+func (c *CrateDB) Reset(ctx context.Context) error {
 	_, err := c.conn.Exec(ctx, "DROP TABLE IF EXISTS test")
 	if err != nil {
 		return fmt.Errorf("cratedb:Reset: %v", err)
@@ -119,7 +126,7 @@ func (c CrateDB) Reset(ctx context.Context) error {
 	return nil
 }
 
-func (c CrateDB) SendDocument(docs []any) error {
+func (c *CrateDB) SendDocument(docs []any) error {
 	b := &pgx.Batch{}
 	for _, doc := range docs {
 		insert := `INSERT INTO test (
@@ -209,7 +216,7 @@ func (c CrateDB) SendDocument(docs []any) error {
 			$36,
 			$37,	
 			$38
-		)`
+		);`
 
 		b.Queue(insert,
 			doc.(ma)["About"],
@@ -246,49 +253,60 @@ func (c CrateDB) SendDocument(docs []any) error {
 			doc.(ma)["Picture"],
 			doc.(ma)["Registered"],
 			doc.(ma)["Tags"],
-			time.Unix(0, doc.(ma)["_event_time"].(int64)).Format(time.RFC3339Nano),
+			time.Unix(doc.(ma)["_event_time"].(int64)/1_000_000, (doc.(ma)["_ts"].(int64)%1_000_000)*1_000),
 			doc.(ma)["_id"],
-			time.Unix(0, doc.(ma)["_ts"].(int64)).Format(time.RFC3339Nano),
+			time.Unix(doc.(ma)["_ts"].(int64)/1_000_000, (doc.(ma)["_ts"].(int64)%1_000_000)*1_000),
 			doc.(ma)["generator_identifier"],
 		)
 	}
 
-	results := c.conn.SendBatch(context.Background(), b)
-	_, err := results.Exec()
+	br := c.conn.SendBatch(context.Background(), b)
+	_, err := br.Exec()
 	if err != nil {
-		return fmt.Errorf("cratedb:SendDocument: %v", err)
+		return fmt.Errorf("cratedb:SendDocument: exec; %v", err)
 	}
 
-	err = results.Close()
+	err = br.Close()
 	if err != nil {
-		return fmt.Errorf("cratedb:SendDocument: %v", err)
+		return fmt.Errorf("cratedb:SendDocument: close; %v", err)
 	}
 
 	return nil
 }
 
-func (c CrateDB) SendPatch(docs []any) error {
+func (c *CrateDB) SendPatch(docs []any) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (c CrateDB) GetLatestTimestamp() (time.Time, error) {
-	query := `SELECT MAX(ts) FROM test`
+func (c *CrateDB) GetLatestTimestamp() (time.Time, error) {
+	query := `SELECT MAX(event_time) FROM test.test;`
+
 	var ts time.Time
-	err := c.conn.QueryRow(context.Background(), query).Scan(&ts)
+	rows, err := c.conn.Query(context.Background(), query)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("cratedb:GetLatestTimestamp: %v", err)
+		return time.Time{}, fmt.Errorf("cratedb:GetLatestTimestamp: query; %v", err)
 	}
+	if !rows.Next() {
+		return time.Time{}, fmt.Errorf("cratedb:GetLatestTimestamp: no rows")
+	}
+	err = rows.Scan(&ts)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("cratedb:GetLatestTimestamp: scan; %v", err)
+	}
+	rows.Close()
 
-	return ts, nil
+	tsv := ts.UnixMicro()
+
+	return time.Unix(tsv/1_000_000, (tsv%1_000_000)*1_000), nil
 }
 
-func (c CrateDB) ConfigureDestination() error {
+func (c *CrateDB) ConfigureDestination() error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (c CrateDB) Close(ctx context.Context) error {
+func (c *CrateDB) Close(ctx context.Context) error {
 	c.conn.Close()
 	return nil
 }

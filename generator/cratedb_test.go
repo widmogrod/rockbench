@@ -22,7 +22,7 @@ func crateDbDocs() ([]any, error) {
 }
 
 func TestNewCrateDB(t *testing.T) {
-	uri := "postgres://crate:@localhost:5432/test"
+	uri := "postgres://crate:@localhost:5432/test?pool_max_conns=100&pool_min_conns=10"
 	c, err := NewCrateDB(context.Background(), uri)
 	if err != nil {
 		t.Fatalf("NewCrateDB() error = %v", err)
@@ -52,10 +52,17 @@ func TestNewCrateDB(t *testing.T) {
 		t.Fatalf("CrateDB.SendDocument() error = %v", err)
 	}
 
-	err = c.Reset(context.Background())
+	timestamp, err := c.GetLatestTimestamp()
 	if err != nil {
-		t.Fatalf("CrateDB.Reset() error = %v", err)
+		t.Fatalf("CrateDB.GetLatestTimestamp() error = %v", err)
 	}
+
+	t.Logf("CrateDB.GetLatestTimestamp() = %s", timestamp.String())
+
+	//err = c.Reset(context.Background())
+	//if err != nil {
+	//	t.Fatalf("CrateDB.Reset() error = %v", err)
+	//}
 
 	err = c.Close(context.Background())
 	if err != nil {
