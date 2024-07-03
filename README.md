@@ -99,3 +99,13 @@ two methods:
 
 Once the new source is implemented, handle it
 in [main.go](https://github.com/rockset/rockbench/blob/master/generator/main.go).
+
+## Development
+
+```
+# Run docker compose for local development
+docker compose -f dev/compose.yml up -d
+
+To test CrateDB part run:
+CRATEDB_URI="postgres://crate:@localhost:5432/test?pool_max_conns=10&pool_min_conns=3" go test ./... 
+```
