@@ -188,7 +188,7 @@ func main() {
 	case "null":
 		d = &generator.Null{}
 	default:
-		log.Fatal("Unsupported destination. Supported options are Rockset, Elastic & Null")
+		log.Fatal("Unsupported destination. Supported options are Rockset, Elastic, CrateDB & Null")
 	}
 
 	if exportMetrics {
