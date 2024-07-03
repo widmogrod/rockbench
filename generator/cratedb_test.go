@@ -2,6 +2,7 @@ package generator
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 )
@@ -49,7 +50,22 @@ func TestTimestampsConversion(t *testing.T) {
 }
 
 func TestNewCrateDB(t *testing.T) {
-	uri := "postgres://crate:@localhost:5432/test?pool_max_conns=100&pool_min_conns=10"
+	uri := os.Getenv("CRATEDB_URI")
+	if uri == "" {
+		t.Skipf(`
+CRATEDB_URI not set.
+
+To run this test, make sure you run:
+  docker compose -f dev/compose.yml up -d
+
+And then run:
+  CRATEDB_URI="postgres://crate:@localhost:5432/test?pool_max_conns=10&pool_min_conns=3" go test ./... 
+
+`)
+	}
+
+	t.Logf("CRATEDB_URI: %s", uri)
+
 	c, err := NewCrateDB(context.Background(), uri)
 	if err != nil {
 		t.Fatalf("NewCrateDB() error = %v", err)
