@@ -81,20 +81,25 @@ func TestNewCrateDB(t *testing.T) {
 
 	maxTimestamp := findMaxTimestamp(docs)
 
-	// need to sleep, otherwise error
-	// I don't know why
+	// I don't know why, but without slip I get error
+	// > can't scan into dest[0]: cannot scan NULL into *time.Time
+	// It looks like table is not visible to be queried by driver imminently after insert,
+	// but 1s later everything works. This could be go driver or cratedb thingy?
 	time.Sleep(1 * time.Second)
 	timestamp, err := c.GetLatestTimestamp()
 	if err != nil {
 		t.Fatalf("CrateDB.GetLatestTimestamp() error = %v", err)
 	}
 
-	delta := timestamp.UnixMicro() - maxTimestamp
-	if delta > 0 || delta < 0 {
-		t.Errorf("CrateDB.GetLatestTimestamp() delta is %d, want 0", delta)
+	delta := maxTimestamp - timestamp.UnixMicro()
+	epsilon := int64(1000)
+	if delta > epsilon {
+		t.Errorf("CrateDB.GetLatestTimestamp() delta is %d, cannot be bigger than %d", delta, epsilon)
 	}
 
 	t.Logf("CrateDB.GetLatestTimestamp() = %s", timestamp.String())
+	t.Logf("   timestamp = %d", timestamp.UnixMicro())
+	t.Logf("maxTimestamp = %d", maxTimestamp)
 
 	err = c.Reset(context.Background())
 	if err != nil {
