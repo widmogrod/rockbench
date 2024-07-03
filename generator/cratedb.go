@@ -2,6 +2,7 @@ package generator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"time"
@@ -37,77 +38,7 @@ type CrateDB struct {
 }
 
 func (c *CrateDB) Init(ctx context.Context) error {
-	table := `CREATE TABLE IF NOT EXISTS test (
-		About STRING,
-
-		Address OBJECT(STRICT) AS (
-			City STRING,
-			Street STRING,
-			ZipCode INTEGER,
-			Coordinates OBJECT(STRICT) AS (
-				Latitude REAL,
-				Longitude REAL
-			)
-		),
-
-		Age INTEGER,
-		Balance REAL,
-		Company STRING,
-		Email STRING,
-		Friends OBJECT(STRICT) AS (
-			Friend1 OBJECT(STRICT) AS (
-				Name OBJECT(STRICT) AS (
-					"First" STRING,
-					"Last" STRING
-				),
-				Age SMALLINT
-			),
-			Friend2 OBJECT(STRICT) AS (
-				Name OBJECT(STRICT) AS (
-					"First" STRING,
-					"Last" STRING
-				),
-				Age SMALLINT
-			),
-			Friend3 OBJECT(STRICT) AS (
-				Name OBJECT(STRICT) AS (
-					"First" STRING,
-					"Last" STRING
-				),
-				Age SMALLINT
-			),
-			Friend4 OBJECT(STRICT) AS (
-				Name OBJECT(STRICT) AS (
-					"First" STRING,
-					"Last" STRING
-				),
-				Age SMALLINT
-			),
-			Friend5 OBJECT(STRICT) AS (
-				Name OBJECT(STRICT) AS (
-					"First" STRING,
-					"Last" STRING
-				),
-				Age SMALLINT
-			)
-		),
-		Greeting STRING,
-		Guid STRING,
-		IsActive BOOLEAN,
-		Name OBJECT(STRICT) AS (
-			"First" STRING,
-			"Last" STRING
-		),
-		Phone STRING,
-		Picture STRING,
-		Registered STRING,
-		Tags ARRAY(STRING),
-		event_time TIMESTAMP WITH TIME ZONE,
-		id STRING,
-		ts TIMESTAMP WITH TIME ZONE,
-		generator_identifier STRING
-	);
-	`
+	table := `CREATE TABLE IF NOT EXISTS test (doc OBJECT)`
 
 	_, err := c.conn.Exec(ctx, table)
 	if err != nil {
@@ -129,135 +60,17 @@ func (c *CrateDB) Reset(ctx context.Context) error {
 func (c *CrateDB) SendDocument(docs []any) error {
 	b := &pgx.Batch{}
 	for _, doc := range docs {
-		insert := `INSERT INTO test (
-			About,
-			Address,
-			Age,
-			Balance,
-			Company,
-			Email,
-			Friends,
-			Greeting,
-			Guid,
-			IsActive,
-			Name,
-			Phone,
-			Picture,
-			Registered,
-			Tags,
-			event_time,
-			id,
-			ts,
-			generator_identifier
-		) VALUES (
-			$1,
-			{
-				City = $2,
-				Coordinates = {
-					Latitude = $3::REAL,
-					Longitude = $4::REAL
-				},
-				Street = $5,
-				ZipCode = $6::INTEGER
-			},
-			$7::INTEGER,
-			$8::REAL,
-			$9,
-			$10,
-			{
-				Friend1 = {
-					Name = {
-						"First" = $11,
-						"Last" = $12
-					},
-					Age = $13::SMALLINT
-				},
-				Friend2 = {
-					Name = {
-						"First" = $14,
-						"Last" = $15
-					},
-					Age = $16::SMALLINT
-				},
-				Friend3 = {	
-					Name = {
-						"First" = $17,
-						"Last" = $18
-					},
-					Age = $19::SMALLINT
-				},
-				Friend4 = {
-					Name = {
-						"First" = $20,
-						"Last" = $21
-					},
-					Age = $22::SMALLINT
-				},
-				Friend5 = {
-					Name = {
-						"First" = $23,
-						"Last" = $24
-					},
-					Age = $25::SMALLINT	
-				}
-			},
-			$26,
-			$27,
-			$28::BOOLEAN,
-			{
-				"First" = $29,	
-				"Last" = $30
-			},
-			$31,
-			$32,
-			$33,
-			$34,
-			$35,
-			$36,
-			$37,	
-			$38
-		);`
+		insert := `INSERT INTO test (doc) VALUES ($1);`
 
-		b.Queue(insert,
-			doc.(ma)["About"],
-			doc.(ma)["Address"].(ma)["City"],
-			doc.(ma)["Address"].(ma)["Coordinates"].(ma)["Latitude"],
-			doc.(ma)["Address"].(ma)["Coordinates"].(ma)["Longitude"],
-			doc.(ma)["Address"].(ma)["Street"],
-			doc.(ma)["Address"].(ma)["ZipCode"],
-			doc.(ma)["Age"],
-			doc.(ma)["Balance"],
-			doc.(ma)["Company"],
-			doc.(ma)["Email"],
-			doc.(ma)["Friends"].(ma)["Friend1"].(ma)["Name"].(ma)["First"],
-			doc.(ma)["Friends"].(ma)["Friend1"].(ma)["Name"].(ma)["Last"],
-			doc.(ma)["Friends"].(ma)["Friend1"].(ma)["Age"],
-			doc.(ma)["Friends"].(ma)["Friend2"].(ma)["Name"].(ma)["First"],
-			doc.(ma)["Friends"].(ma)["Friend2"].(ma)["Name"].(ma)["Last"],
-			doc.(ma)["Friends"].(ma)["Friend2"].(ma)["Age"],
-			doc.(ma)["Friends"].(ma)["Friend3"].(ma)["Name"].(ma)["First"],
-			doc.(ma)["Friends"].(ma)["Friend3"].(ma)["Name"].(ma)["Last"],
-			doc.(ma)["Friends"].(ma)["Friend3"].(ma)["Age"],
-			doc.(ma)["Friends"].(ma)["Friend4"].(ma)["Name"].(ma)["First"],
-			doc.(ma)["Friends"].(ma)["Friend4"].(ma)["Name"].(ma)["Last"],
-			doc.(ma)["Friends"].(ma)["Friend4"].(ma)["Age"],
-			doc.(ma)["Friends"].(ma)["Friend5"].(ma)["Name"].(ma)["First"],
-			doc.(ma)["Friends"].(ma)["Friend5"].(ma)["Name"].(ma)["Last"],
-			doc.(ma)["Friends"].(ma)["Friend5"].(ma)["Age"],
-			doc.(ma)["Greeting"],
-			doc.(ma)["Guid"],
-			doc.(ma)["IsActive"],
-			doc.(ma)["Name"].(ma)["First"],
-			doc.(ma)["Name"].(ma)["Last"],
-			doc.(ma)["Phone"],
-			doc.(ma)["Picture"],
-			doc.(ma)["Registered"],
-			doc.(ma)["Tags"],
-			time.UnixMicro(doc.(ma)["_event_time"].(int64)),
-			doc.(ma)["_id"],
-			time.UnixMicro(doc.(ma)["_ts"].(int64)),
-			doc.(ma)["generator_identifier"],
-		)
+		//doc.(ma)["event_time"] = doc.(ma)["_event_time"]
+		//doc.(ma)["ts"] = doc.(ma)["_ts"]
+		//doc.(ma)["id"] = doc.(ma)["_id"]
+
+		data, err := json.Marshal(doc)
+		if err != nil {
+			return fmt.Errorf("cratedb:SendDocument: %v", err)
+		}
+		b.Queue(insert, data)
 	}
 
 	br := c.conn.SendBatch(context.Background(), b)
@@ -280,10 +93,16 @@ func (c *CrateDB) SendPatch(docs []any) error {
 }
 
 func (c *CrateDB) GetLatestTimestamp() (time.Time, error) {
-	query := `SELECT MAX(event_time) FROM test.test;`
+	ctx := context.Background()
+	_, err := c.conn.Exec(ctx, `REFRESH TABLE test;`)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("cratedb:GetLatestTimestamp: %v", err)
+	}
+
+	query := `SELECT MAX(doc['_event_time'])::TIMESTAMP FROM test;`
 
 	var ts time.Time
-	rows, err := c.conn.Query(context.Background(), query)
+	rows, err := c.conn.Query(ctx, query)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("cratedb:GetLatestTimestamp: query; %v", err)
 	}
