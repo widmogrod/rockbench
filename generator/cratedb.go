@@ -102,9 +102,9 @@ func (c *CrateDB) Init(ctx context.Context) error {
 		Picture STRING,
 		Registered STRING,
 		Tags ARRAY(STRING),
-		event_time TIMESTAMP WITHOUT TIME ZONE,
+		event_time TIMESTAMP WITH TIME ZONE,
 		id STRING,
-		ts TIMESTAMP WITHOUT TIME ZONE,
+		ts TIMESTAMP WITH TIME ZONE,
 		generator_identifier STRING
 	);
 	`
@@ -253,9 +253,11 @@ func (c *CrateDB) SendDocument(docs []any) error {
 			doc.(ma)["Picture"],
 			doc.(ma)["Registered"],
 			doc.(ma)["Tags"],
-			time.Unix(doc.(ma)["_event_time"].(int64)/1_000_000, (doc.(ma)["_ts"].(int64)%1_000_000)*1_000),
+			time.UnixMicro(doc.(ma)["_event_time"].(int64)),
+			//time.Unix(doc.(ma)["_event_time"].(int64)/1_000_000, (doc.(ma)["_ts"].(int64)%1_000_000)*1_000),
 			doc.(ma)["_id"],
-			time.Unix(doc.(ma)["_ts"].(int64)/1_000_000, (doc.(ma)["_ts"].(int64)%1_000_000)*1_000),
+			time.UnixMicro(doc.(ma)["_ts"].(int64)),
+			//time.Unix(doc.(ma)["_ts"].(int64)/1_000_000, (doc.(ma)["_ts"].(int64)%1_000_000)*1_000),
 			doc.(ma)["generator_identifier"],
 		)
 	}
