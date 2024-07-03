@@ -34,7 +34,7 @@ func findMaxTimestamp(rows []any) int64 {
 	return maxTimestamp
 }
 
-func TestTimestamps(t *testing.T) {
+func TestTimestampsConversion(t *testing.T) {
 	var given int64 = 1720004969682695
 
 	t1 := time.Unix(given/1_000_000, (given%1_000_000)*1_000)
@@ -80,9 +80,6 @@ func TestNewCrateDB(t *testing.T) {
 	}
 
 	maxTimestamp := findMaxTimestamp(docs)
-	t.Logf("findMaxTimestamp() = %d", maxTimestamp)
-	t.Logf("UnixMicro() = %s", time.UnixMicro(maxTimestamp))
-	t.Logf("findMaxTimestamp() = %s", time.Unix(maxTimestamp/1_000_000, (maxTimestamp%1_000_000)*1_000))
 
 	// need to sleep, otherwise error
 	// I don't know why
