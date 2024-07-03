@@ -117,7 +117,7 @@ func (c *CrateDB) GetLatestTimestamp() (time.Time, error) {
 
 	tsv := ts.UnixMicro()
 
-	return time.Unix(tsv/1_000_000, (tsv%1_000_000)*1_000), nil
+	return time.Unix(0, tsv), nil
 }
 
 func (c *CrateDB) ConfigureDestination() error {

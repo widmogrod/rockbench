@@ -97,18 +97,13 @@ And then run:
 
 	maxTimestamp := findMaxTimestamp(docs)
 
-	// I don't know why, but without slip I get error
-	// > can't scan into dest[0]: cannot scan NULL into *time.Time
-	// It looks like table is not visible to be queried by driver imminently after insert,
-	// but 1s later everything works. This could be go driver or cratedb thingy?
-	time.Sleep(1 * time.Second)
 	timestamp, err := c.GetLatestTimestamp()
 	if err != nil {
 		t.Fatalf("CrateDB.GetLatestTimestamp() error = %v", err)
 	}
 
 	delta := maxTimestamp - timestamp.UnixMicro()
-	epsilon := int64(1000)
+	epsilon := int64(100)
 	if delta > epsilon {
 		t.Errorf("CrateDB.GetLatestTimestamp() delta is %d, cannot be bigger than %d", delta, epsilon)
 	}
