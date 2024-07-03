@@ -254,10 +254,8 @@ func (c *CrateDB) SendDocument(docs []any) error {
 			doc.(ma)["Registered"],
 			doc.(ma)["Tags"],
 			time.UnixMicro(doc.(ma)["_event_time"].(int64)),
-			//time.Unix(doc.(ma)["_event_time"].(int64)/1_000_000, (doc.(ma)["_ts"].(int64)%1_000_000)*1_000),
 			doc.(ma)["_id"],
 			time.UnixMicro(doc.(ma)["_ts"].(int64)),
-			//time.Unix(doc.(ma)["_ts"].(int64)/1_000_000, (doc.(ma)["_ts"].(int64)%1_000_000)*1_000),
 			doc.(ma)["generator_identifier"],
 		)
 	}
